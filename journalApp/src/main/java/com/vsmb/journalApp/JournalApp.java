@@ -1,13 +1,13 @@
-package com.titgroup.myFirstProject;
+package com.vsmb.journalApp;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class MyFirstProjectApplication {
+public class JournalApp {
 
 	public static void main(String[] args) {
-		SpringApplication.run(MyFirstProjectApplication.class, args);
-	}	
+		SpringApplication.run(JournalApp.class, args);
+	}
 
 }
