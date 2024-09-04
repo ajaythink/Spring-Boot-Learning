@@ -1,48 +1,71 @@
-package com.vsmb.journalApp.controller;
+package com.vsmb.journalapp.controller;
 
-import com.vsmb.journalApp.entity.JournalEntity;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.vsmb.journalapp.entity.JournalEntry;
+import com.vsmb.journalapp.service.JournalEntryService;
 
 @RestController
 @RequestMapping("/journal")
 public class JournalEntryController {
-//    This is map is storing id and entries
-    private Map<Long, JournalEntity> journalEntries = new HashMap<>();
 
-    //This method will be return all store data
-    @GetMapping                             //http://localhost:8080/journal    GET
-    public List<JournalEntity> getAll(){
-        return new ArrayList<>(journalEntries.values());
-    }
+  @Autowired
+  private JournalEntryService journalEntryService;
 
-    //this method will be inset in to map "journalEntries"
-    @PostMapping                            //http://localhost:8080/journal    POST
-    public boolean createEntry(@RequestBody JournalEntity myEntry){
-        journalEntries.put(myEntry.getId(), myEntry);
-        return true;
-    }
+  @GetMapping("/health")
+  public String healthChecker() {
+    return "Ok";
+  }
 
-    //this method will be return particular ID wise record
-    @GetMapping("id/{myId}")                    //http://localhost:8080/journal/id/3
-    public JournalEntity getJournalEntityById(@PathVariable Long myId){
-        return journalEntries.get(myId);
-    }
+  @GetMapping("/display")
+  public List<JournalEntry> getAll() {
+    return journalEntryService.getAll();
+  }
 
-    //this will be deleted recode according to ID
-    @DeleteMapping("id/{myId}")             //http://localhost:8080/journal/id/3    DELETE
-    public JournalEntity deleteJournalEntityById(@PathVariable Long myId){
-        return journalEntries.remove(myId);
-    }
+  @PostMapping
+  public JournalEntry createEntry(@RequestBody JournalEntry myEntry) {
+    myEntry.setDate(LocalDateTime.now());
+    journalEntryService.saveEntry(myEntry);
+    return myEntry;
+  }
 
-    //this method will be updated recode according to ID.
-    @PutMapping("/id/{id}")                  //http://localhost:8080/journal/id/3    PUT
-    public JournalEntity updateJournalEntityById(@PathVariable Long id, @RequestBody JournalEntity myEntity){
-        return journalEntries.put(id, myEntity);
+  @GetMapping("id/{myId}")
+  public ResponseEntity<JournalEntry> getJournalEntityById(@PathVariable ObjectId myId) {
+    return journalEntryService.findById(myId)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+  }
+
+  @DeleteMapping("id/{myId}")
+  public ResponseEntity<Void> deleteJournalEntityById(@PathVariable ObjectId myId) {
+    if (journalEntryService.findById(myId).isPresent()) {
+      journalEntryService.deleteById(myId);
+      return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    } else {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
+  }
+
+  @PutMapping("/id/{id}")
+  public ResponseEntity<JournalEntry> updateJournalEntityById(@PathVariable ObjectId id,
+      @RequestBody JournalEntry myEntity) {
+    return journalEntryService.findById(id)
+        .map(oldEntry -> {
+          oldEntry.setTitle(myEntity.getTitle() != null && !myEntity.getTitle().isEmpty() ? myEntity.getTitle()
+              : oldEntry.getTitle());
+          oldEntry.setContent(myEntity.getContent() != null && !myEntity.getContent().isEmpty() ? myEntity.getContent()
+              : oldEntry.getContent());
+          journalEntryService.saveEntry(oldEntry);
+          return ResponseEntity.ok(oldEntry);
+        })
+        .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+  }
 
 }
